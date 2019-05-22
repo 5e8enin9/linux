@@ -845,7 +845,6 @@ static void bcm2835_mmc_timeout_timer(struct timer_list *t)
 		}
 	}
 
-	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -860,7 +859,6 @@ static void bcm2835_mmc_enable_sdio_irq_nolock(struct bcm2835_host *host, int en
 
 		bcm2835_mmc_writel(host, host->ier, SDHCI_INT_ENABLE, 7);
 		bcm2835_mmc_writel(host, host->ier, SDHCI_SIGNAL_ENABLE, 7);
-		mmiowb();
 	}
 }
 
@@ -1163,7 +1161,6 @@ static void bcm2835_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	else
 		bcm2835_mmc_send_command(host, mrq->cmd);
 
-	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (!(mrq->sbc && !(host->flags & SDHCI_AUTO_CMD23)) && mrq->cmd->data && host->use_dma) {
@@ -1232,8 +1229,6 @@ static void bcm2835_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	bcm2835_mmc_set_clock(host, host->clock);
 	bcm2835_mmc_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 
-	mmiowb();
-
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1286,8 +1281,6 @@ static void bcm2835_mmc_tasklet_finish(unsigned long param)
 	host->mrq = NULL;
 	host->cmd = NULL;
 	host->data = NULL;
-
-	mmiowb();
 
 	spin_unlock_irqrestore(&host->lock, flags);
 	mmc_request_done(host->mmc, mrq);
@@ -1397,7 +1390,6 @@ static int bcm2835_mmc_add_host(struct bcm2835_host *host)
 		goto untasklet;
 	}
 
-	mmiowb();
 	ret = mmc_add_host(mmc);
 	if (ret) {
 		dev_err(dev, "could not add MMC host\n");
