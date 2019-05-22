@@ -450,7 +450,6 @@ static void bcm2835_sdhost_reset_internal(struct bcm2835_host *host)
 	host->sectors = 0;
 	bcm2835_sdhost_write(host, host->hcfg, SDHCFG);
 	bcm2835_sdhost_write(host, SDCDIV_MAX_CDIV, SDCDIV);
-	mmiowb();
 }
 
 static void bcm2835_sdhost_reset(struct mmc_host *mmc)
@@ -1355,7 +1354,6 @@ static void bcm2835_sdhost_timeout(struct timer_list *t)
 		}
 	}
 
-	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1524,8 +1522,6 @@ static irqreturn_t bcm2835_sdhost_irq(int irq, void *dev_id)
 		result = IRQ_HANDLED;
 	}
 
-	mmiowb();
-
 	log_event("IRQ>", bcm2835_sdhost_read(host, SDHSTS), 0);
 	spin_unlock(&host->lock);
 
@@ -1584,7 +1580,6 @@ void bcm2835_sdhost_set_clock(struct bcm2835_host *host, unsigned int clock)
 			 */
 			host->cdiv = SDCDIV_MAX_CDIV;
 			bcm2835_sdhost_write(host, host->cdiv, SDCDIV);
-			mmiowb();
 			spin_unlock_irqrestore(&host->lock, flags);
 			return;
 		}
@@ -1648,7 +1643,6 @@ void bcm2835_sdhost_set_clock(struct bcm2835_host *host, unsigned int clock)
 	host->clock = input_clock;
 	host->reset_clock = 0;
 
-	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
@@ -1723,7 +1717,6 @@ static void bcm2835_sdhost_request(struct mmc_host *mmc, struct mmc_request *mrq
 		}
 		mrq->cmd->error = -EILSEQ;
 		tasklet_schedule(&host->finish_tasklet);
-		mmiowb();
 		spin_unlock_irqrestore(&host->lock, flags);
 		return;
 	}
@@ -1746,7 +1739,6 @@ static void bcm2835_sdhost_request(struct mmc_host *mmc, struct mmc_request *mrq
 
 	log_event("CMD ", mrq->cmd->opcode,
 		   mrq->data ? (u32)mrq->data->blksz : 0);
-	mmiowb();
 
 	log_event("REQ>", mrq, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -1781,8 +1773,6 @@ static void bcm2835_sdhost_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	bcm2835_sdhost_write(host, host->hcfg, SDHCFG);
 
-	mmiowb();
-
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (!ios->clock || ios->clock != host->clock)
@@ -1816,8 +1806,6 @@ static void bcm2835_sdhost_cmd_wait_work(struct work_struct *work)
 	}
 
 	bcm2835_sdhost_finish_command(host, &flags);
-
-	mmiowb();
 
 	log_event("CWK>", host->cmd, 0);
 
@@ -1870,8 +1858,6 @@ static void bcm2835_sdhost_tasklet_finish(unsigned long param)
 	host->mrq = NULL;
 	host->cmd = NULL;
 	host->data = NULL;
-
-	mmiowb();
 
 	host->dma_desc = NULL;
 	terminate_chan = host->dma_chan;
@@ -2004,7 +1990,6 @@ int bcm2835_sdhost_add_host(struct bcm2835_host *host)
 		goto untasklet;
 	}
 
-	mmiowb();
 	mmc_add_host(mmc);
 
 	pio_limit_string[0] = '\0';
